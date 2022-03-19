@@ -1,6 +1,6 @@
 name: fontsource
 description: Add Fontsource fonts to your flutter app. Direct access to Fontsource API.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/fontsource/fontsource-flutter
 
 environment:
@@ -14,7 +14,6 @@ dependencies:
   json2yaml: ^3.0.0
   progress_bar: ^1.0.0
   yaml: ^3.1.0
-  yaml_edit: ^2.0.1
 
 dev_dependencies:
   flutter_test:

@@ -99,6 +99,8 @@ Future<FontsourceConfig> getConfig() async {
         }
       }
     }
+    String? version = configDynamicMap[id]?['version'];
+    if (version == 'latest') version = null;
     config[id] = FontConfig(
         subsets, weights, styles, metadata, configDynamicMap[id]?['version']);
   }));
