@@ -33,7 +33,7 @@ Future<Uint8List> fetchFontFile(
       break;
     default:
   }
-  var response = await http.get(Uri.parse(
+  final response = await http.get(Uri.parse(
       '$apiUrl/v1/fonts/$fontId/$subset-$weight-$style.$ext${version == null ? '' : '?version=$version'}'));
 
   return response.bodyBytes;

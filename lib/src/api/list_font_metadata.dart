@@ -76,7 +76,7 @@ Future<List<FontMetadata>> listFontMetadata(
     String? category,
     String? version,
     String? type}) async {
-  var query = {
+  final query = {
     'id': id,
     'family': family,
     'subsets': subsets,
@@ -90,7 +90,7 @@ Future<List<FontMetadata>> listFontMetadata(
     'type': type,
   };
   query.removeWhere((_, value) => value == null);
-  var response = await http
+  final response = await http
       .get(Uri.parse('$apiUrl/v1/fonts?${Uri(queryParameters: query).query}'));
   List<dynamic> fonts = jsonDecode(response.body);
 

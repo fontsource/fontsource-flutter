@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:fontsource/api.dart';
 import 'package:yaml/yaml.dart';
 
+import '../utils.dart';
+
 class FontConfig {
   List<String> subsets;
   List<int> weights;
@@ -16,12 +18,19 @@ class FontConfig {
   }
 }
 
-typedef FontsourceConfig = Map<String, FontConfig>;
+class FontsourceConfig {
+  Map<String, FontConfig> fonts;
+  FontsourceConfig(this.fonts);
+  @override
+  String toString() {
+    return '{fonts: $fonts}';
+  }
+}
 
 Future<FontsourceConfig> getConfig() async {
   dynamic configYaml;
   try {
-    File fontsourceFile = File('fontsource.yaml');
+    File fontsourceFile = File(cwdJoin('fontsource.yaml'));
     if (fontsourceFile.existsSync()) {
       String fontsourceFileString = fontsourceFile.readAsStringSync();
 
@@ -30,7 +39,7 @@ Future<FontsourceConfig> getConfig() async {
       }
     }
     if (configYaml == null) {
-      File pubspecFile = File('pubspec.yaml');
+      File pubspecFile = File(cwdJoin('pubspec.yaml'));
 
       if (pubspecFile.existsSync()) {
         dynamic pubspecYaml = loadYaml(pubspecFile.readAsStringSync());
@@ -45,9 +54,10 @@ Future<FontsourceConfig> getConfig() async {
     throw Exception('Fontsource config not found.');
   }
 
-  Map configDynamicMap = configYaml;
-  FontsourceConfig config = {};
-  await Future.wait(configDynamicMap.keys.map((id) async {
+  Map configMap = configYaml;
+  Map fontsMap = configMap['fonts'] ?? {};
+  final config = FontsourceConfig({});
+  await Future.wait(fontsMap.keys.map((id) async {
     FontMetadata metadata;
     try {
       metadata = (await listFontMetadata(id: id))[0];
@@ -58,11 +68,10 @@ Future<FontsourceConfig> getConfig() async {
     List<String> subsets;
     List<int> weights;
     List<String> styles;
-    if (configDynamicMap[id]?['subsets'] == null ||
-        configDynamicMap[id]['subsets'] == 'all') {
+    if (fontsMap[id]?['subsets'] == null || fontsMap[id]['subsets'] == 'all') {
       subsets = metadata.subsets;
     } else {
-      subsets = (configDynamicMap[id]['subsets'] as YamlList)
+      subsets = (fontsMap[id]['subsets'] as YamlList)
           .map((subset) => subset as String)
           .toList();
       for (var subset in subsets) {
@@ -72,11 +81,10 @@ Future<FontsourceConfig> getConfig() async {
         }
       }
     }
-    if (configDynamicMap[id]?['weights'] == null ||
-        configDynamicMap[id]['weights'] == 'all') {
+    if (fontsMap[id]?['weights'] == null || fontsMap[id]['weights'] == 'all') {
       weights = metadata.weights;
     } else {
-      weights = (configDynamicMap[id]['weights'] as YamlList)
+      weights = (fontsMap[id]['weights'] as YamlList)
           .map((weight) => weight as int)
           .toList();
       for (var weight in weights) {
@@ -86,11 +94,10 @@ Future<FontsourceConfig> getConfig() async {
         }
       }
     }
-    if (configDynamicMap[id]?['weights'] == null ||
-        configDynamicMap[id]['styles'] == 'all') {
+    if (fontsMap[id]?['weights'] == null || fontsMap[id]['styles'] == 'all') {
       styles = metadata.styles;
     } else {
-      styles = (configDynamicMap[id]['styles'] as YamlList)
+      styles = (fontsMap[id]['styles'] as YamlList)
           .map((style) => style as String)
           .toList();
       for (var style in styles) {
@@ -99,10 +106,10 @@ Future<FontsourceConfig> getConfig() async {
         }
       }
     }
-    String? version = configDynamicMap[id]?['version'];
+    String? version = fontsMap[id]?['version'];
     if (version == 'latest') version = null;
-    config[id] = FontConfig(
-        subsets, weights, styles, metadata, configDynamicMap[id]?['version']);
+    config.fonts[id] = FontConfig(
+        subsets, weights, styles, metadata, fontsMap[id]?['version']);
   }));
 
   return config;

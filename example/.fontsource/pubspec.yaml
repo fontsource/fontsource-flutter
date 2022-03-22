@@ -1,0 +1,16 @@
+name: fontsource_gen
+
+environment:
+  sdk: '>=2.15.1 <3.0.0'
+  flutter: '>=1.17.0'
+
+flutter:
+  fonts:
+    - family: Alex Brush
+      fonts:
+        - asset: ../.dart_tool/fontsource/alex-brush/latin-400-normal.ttf
+          weight: 400
+        - asset: ../.dart_tool/fontsource/alex-brush/latin-ext-400-normal.ttf
+          weight: 400
+        - asset: ../.dart_tool/fontsource/alex-brush/vietnamese-400-normal.ttf
+          weight: 400

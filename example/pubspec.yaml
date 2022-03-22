@@ -8,12 +8,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
   cupertino_icons: ^1.0.2
   fontsource:
     path: ../
   fontsource_gen:
-    path: .dart_tool/fontsource
+    path: .fontsource
 
 dev_dependencies:
   flutter_test:
@@ -24,7 +23,8 @@ flutter:
   uses-material-design: true
 
 fontsource:
-  alex-brush:
-    subsets: all
-    weights: [400]
-    styles: [normal]
+  fonts:
+    alex-brush:
+      subsets: all
+      weights: [400]
+      styles: [normal]
