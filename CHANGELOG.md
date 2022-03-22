@@ -1,3 +1,7 @@
+## 0.2.1
+
+- Update README.md file to reflect previous changes and be more concise.
+
 ## 0.2.0
 
 - Move font configuration into `fonts` key in fontsource config.
