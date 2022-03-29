@@ -1,3 +1,7 @@
+## 0.3.0
+
+- Add support for use in packages.
+
 ## 0.2.1
 
 - Update README.md file to reflect previous changes and be more concise.

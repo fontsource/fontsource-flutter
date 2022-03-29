@@ -1,20 +1,22 @@
+import 'dart:convert';
 import 'dart:io';
+
 import 'package:fontsource/api.dart';
+import 'package:path/path.dart' as path;
+import 'package:version/version.dart';
 import 'package:yaml/yaml.dart';
 
-import '../utils.dart';
-
 class FontConfig {
-  List<String> subsets;
-  List<int> weights;
-  List<String> styles;
+  Set<String> subsets;
+  Set<int> weights;
+  Set<String> styles;
   FontMetadata metadata;
   String? version;
   FontConfig(this.subsets, this.weights, this.styles, this.metadata,
       [this.version]);
   @override
   String toString() {
-    return '{subsets: $subsets, weights: $weights, styles: $styles}';
+    return '{subsets: $subsets, weights: $weights, styles: $styles, version: $version}';
   }
 }
 
@@ -27,53 +29,114 @@ class FontsourceConfig {
   }
 }
 
-Future<FontsourceConfig> getConfig() async {
-  dynamic configYaml;
+late FontsourceConfig _config;
+late Set<String> _scannedPackages;
+Map<String, String>? _packageSources;
+
+Future<void> _resolve(String dir, [bool isRoot = false]) async {
+  Map configMap;
+  Set<String> dependencies = {};
+
   try {
-    File fontsourceFile = File(cwdJoin('fontsource.yaml'));
-    if (fontsourceFile.existsSync()) {
-      String fontsourceFileString = fontsourceFile.readAsStringSync();
+    late YamlMap configYaml;
+    bool configFound = false;
 
-      if (fontsourceFileString.isNotEmpty) {
-        configYaml = loadYaml(fontsourceFileString);
+    File pubspecFile = File(path.join(dir, 'pubspec.yaml'));
+    if (pubspecFile.existsSync()) {
+      YamlMap pubspecYaml = loadYaml(pubspecFile.readAsStringSync());
+
+      if (pubspecYaml.containsKey('fontsource')) {
+        configYaml = pubspecYaml['fontsource'] ?? YamlMap();
+        configFound = true;
+      }
+
+      if (pubspecYaml['dependencies'] != null) {
+        dependencies = (pubspecYaml['dependencies'] as YamlMap)
+            .keys
+            .toSet()
+            .cast<String>();
       }
     }
-    if (configYaml == null) {
-      File pubspecFile = File(cwdJoin('pubspec.yaml'));
 
-      if (pubspecFile.existsSync()) {
-        dynamic pubspecYaml = loadYaml(pubspecFile.readAsStringSync());
+    if (!configFound) {
+      File fontsourceFile = File(path.join(dir, 'fontsource.yaml'));
+      if (fontsourceFile.existsSync()) {
+        String fontsourceFileString = fontsourceFile.readAsStringSync();
 
-        if (pubspecYaml['fontsource'] != null) {
-          configYaml = pubspecYaml['fontsource'];
-        }
+        configYaml = loadYaml(fontsourceFileString) ?? {};
+        configFound = true;
       }
     }
-    if (configYaml == null) throw Exception();
+
+    if (!configFound) throw Exception();
+
+    configMap = configYaml;
   } catch (e) {
-    throw Exception('Fontsource config not found.');
+    if (isRoot) {
+      throw Exception('Fontsource config not found.');
+    } else {
+      return;
+    }
   }
 
-  Map configMap = configYaml;
+  for (var key in configMap.keys) {
+    if (key != 'include' && key != 'fonts') {
+      throw Exception('Unknown key in configuration: $key');
+    }
+  }
+  Set<String> include =
+      (configMap['include'] == null || configMap['include'] == 'all'
+          ? dependencies
+          : (configMap['include'] as YamlList).toSet().cast<String>());
+
+  if (include.isNotEmpty) {
+    if (_packageSources == null) {
+      final packageConfig =
+          jsonDecode(File('.dart_tool/package_config.json').readAsStringSync());
+
+      if (packageConfig['configVersion'] != 2) {
+        throw Exception(
+            'Unknown package_config.json version: ${packageConfig['configVersion']}');
+      }
+
+      _packageSources = {};
+
+      for (var package in (packageConfig['packages'] as List)) {
+        var packagePath = path.fromUri(package['rootUri']);
+        _packageSources![package['name']] = path.isRelative(packagePath)
+            ? (path.normalize(path.join('.dart_tool', packagePath)))
+            : (package['rootUri']);
+      }
+    }
+
+    for (var package in include) {
+      if (!_scannedPackages.contains(package)) {
+        await _resolve(_packageSources![package] as String);
+      }
+    }
+  }
+
   Map fontsMap = configMap['fonts'] ?? {};
-  final config = FontsourceConfig({});
   await Future.wait(fontsMap.keys.map((id) async {
     FontMetadata metadata;
     try {
-      metadata = (await listFontMetadata(id: id))[0];
+      metadata = (_config.fonts[id]?.metadata == null)
+          ? (await listFontMetadata(id: id)).first
+          : _config.fonts[id]!.metadata;
     } catch (e) {
       throw Exception('Font $id not found.');
     }
 
-    List<String> subsets;
-    List<int> weights;
-    List<String> styles;
+    Set<String> subsets;
+    Set<int> weights;
+    Set<String> styles;
+
     if (fontsMap[id]?['subsets'] == null || fontsMap[id]['subsets'] == 'all') {
-      subsets = metadata.subsets;
+      subsets = metadata.subsets.toSet();
     } else {
       subsets = (fontsMap[id]['subsets'] as YamlList)
           .map((subset) => subset as String)
-          .toList();
+          .toSet();
       for (var subset in subsets) {
         if (!metadata.subsets.contains(subset)) {
           throw Exception(
@@ -81,12 +144,13 @@ Future<FontsourceConfig> getConfig() async {
         }
       }
     }
+
     if (fontsMap[id]?['weights'] == null || fontsMap[id]['weights'] == 'all') {
-      weights = metadata.weights;
+      weights = metadata.weights.toSet();
     } else {
       weights = (fontsMap[id]['weights'] as YamlList)
           .map((weight) => weight as int)
-          .toList();
+          .toSet();
       for (var weight in weights) {
         if (!metadata.weights.contains(weight)) {
           throw Exception(
@@ -94,23 +158,56 @@ Future<FontsourceConfig> getConfig() async {
         }
       }
     }
-    if (fontsMap[id]?['weights'] == null || fontsMap[id]['styles'] == 'all') {
-      styles = metadata.styles;
+
+    if (fontsMap[id]?['styles'] == null || fontsMap[id]['styles'] == 'all') {
+      styles = metadata.styles.toSet();
     } else {
       styles = (fontsMap[id]['styles'] as YamlList)
           .map((style) => style as String)
-          .toList();
+          .toSet();
       for (var style in styles) {
         if (!metadata.styles.contains(style)) {
           throw Exception('Style $style not found in font ${metadata.family}');
         }
       }
     }
+
     String? version = fontsMap[id]?['version'];
     if (version == 'latest') version = null;
-    config.fonts[id] = FontConfig(
-        subsets, weights, styles, metadata, fontsMap[id]?['version']);
-  }));
 
-  return config;
+    if (_config.fonts[id] == null) {
+      _config.fonts[id] = FontConfig(
+          subsets, weights, styles, metadata, fontsMap[id]?['version']);
+    } else {
+      _config.fonts[id]?.subsets.addAll(subsets);
+      _config.fonts[id]?.weights.addAll(weights);
+      _config.fonts[id]?.styles.addAll(styles);
+
+      // Give latest specified version from all packages unless root specifies.
+      if (isRoot) {
+        _config.fonts[id]?.version = fontsMap[id]?['version'];
+      } else {
+        if (_config.fonts[id]?.version != null) {
+          if (fontsMap[id]?['version'] == null) {
+            _config.fonts[id]?.version = null;
+          } else {
+            if (Version.parse(fontsMap[id]?['version']) >
+                Version.parse(_config.fonts[id]?.version)) {
+              _config.fonts[id]?.version = fontsMap[id]?['version'];
+            }
+          }
+        }
+      }
+    }
+  }));
+}
+
+Future<FontsourceConfig> getConfig() async {
+  _config = FontsourceConfig({});
+
+  _scannedPackages = {};
+
+  await _resolve(Directory.current.path, true);
+
+  return _config;
 }

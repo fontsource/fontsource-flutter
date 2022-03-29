@@ -1,10 +1,10 @@
 import 'dart:io';
 
-import 'package:fontsource/src/utils.dart';
 import 'package:json2yaml/json2yaml.dart';
 import 'package:progress_bar/progress_bar.dart';
 
 import '../../api.dart';
+import '../utils.dart';
 import 'config.dart';
 
 final _genPackagePath = cwdJoin('.fontsource');
