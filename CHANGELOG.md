@@ -1,3 +1,8 @@
+## 0.3.1
+
+- Fix cli version parser error.
+- Update description.
+
 ## 0.3.0
 
 - Add support for use in packages.

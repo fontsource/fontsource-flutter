@@ -1,6 +1,6 @@
 # Fontsource for Flutter
 
-Easily add Fontsource fonts to your flutter app. Also includes a dart interface for the Fontsource API.
+Easily add Fontsource fonts to your flutter app. Includes a dart interface for the Fontsource API.
 
 ## Getting started
 

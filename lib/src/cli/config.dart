@@ -192,7 +192,7 @@ Future<void> _resolve(String dir, [bool isRoot = false]) async {
             _config.fonts[id]?.version = null;
           } else {
             if (Version.parse(fontsMap[id]?['version']) >
-                Version.parse(_config.fonts[id]?.version)) {
+                Version.parse(_config.fonts[id]!.version!)) {
               _config.fonts[id]?.version = fontsMap[id]?['version'];
             }
           }
