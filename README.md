@@ -16,7 +16,7 @@ fonts:
     styles: [normal] # Defaults to all
 ```
 
-The config will tell `fontsource` what to download and bundle into your flutter app. To ensure everything is downloaded, execute `dart run fontsource` after your config is modified. Also make sure to run it whenever your repository is cloned. This will generate a local package in the `.fontsource` directory.
+The config will tell `fontsource` what to download and bundle into your flutter app. To ensure everything is downloaded, execute `dart run fontsource` after your config is modified. Also, make sure to run it whenever your repository is cloned. This will generate a local package in the `.fontsource` directory.
 
 You can then import the `fontsource` package:
 

@@ -1,3 +1,8 @@
+## 0.4.0
+
+- Add font zip download to api.
+- Upgrade to dart 2.17 and flutter 3.0.
+
 ## 0.3.1
 
 - Fix cli version parser error.
